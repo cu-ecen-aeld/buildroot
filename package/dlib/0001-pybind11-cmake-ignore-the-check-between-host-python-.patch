@@ -1,0 +1,68 @@
+From a6f3cd320777217fcfafeb863146e1c7b57454e1 Mon Sep 17 00:00:00 2001
+From: Romain Naour <romain.naour@smile.fr>
+Date: Sun, 28 Jul 2019 21:54:47 +0200
+Subject: [PATCH] pybind11: cmake: ignore the check between host-python and
+ cross-compiler
+
+When dlib is compiling, cmake will compare python architecture and target
+architecture. So in cross-compiling case, it is irrevelant because host and
+target architecture often differs. The main problem come from checking python
+architecture on host and not on target.
+
+Here is an error when compiling dlib from x86_64 to arm 32-bit target :
+```
+Python config failure: Python is 64-bit, chosen compiler is 32-bit
+```
+
+So :
+- Skipping the comparation when cross-compiling is enabled.
+
+Upstream status : upstream
+https://github.com/davisking/dlib/pull/1848
+
+Signed-off-by: Romain Naour <romain.naour@smile.fr>
+Signed-off-by: Alexandre PAYEN <alexandre.payen@smile.fr>
+---
+ .../pybind11/tools/FindPythonLibsNew.cmake    | 25 +++++++++++--------
+ 1 file changed, 14 insertions(+), 11 deletions(-)
+
+diff --git a/dlib/external/pybind11/tools/FindPythonLibsNew.cmake b/dlib/external/pybind11/tools/FindPythonLibsNew.cmake
+index b29b287d..690724af 100644
+--- a/dlib/external/pybind11/tools/FindPythonLibsNew.cmake
++++ b/dlib/external/pybind11/tools/FindPythonLibsNew.cmake
+@@ -113,18 +113,21 @@ list(GET _PYTHON_VALUES 7 PYTHON_LIBRARY_SUFFIX)
+ list(GET _PYTHON_VALUES 8 PYTHON_LIBDIR)
+ list(GET _PYTHON_VALUES 9 PYTHON_MULTIARCH)
+ 
+-# Make sure the Python has the same pointer-size as the chosen compiler
+-# Skip if CMAKE_SIZEOF_VOID_P is not defined
+-if(CMAKE_SIZEOF_VOID_P AND (NOT "${PYTHON_SIZEOF_VOID_P}" STREQUAL "${CMAKE_SIZEOF_VOID_P}"))
+-    if(PythonLibsNew_FIND_REQUIRED)
+-        math(EXPR _PYTHON_BITS "${PYTHON_SIZEOF_VOID_P} * 8")
+-        math(EXPR _CMAKE_BITS "${CMAKE_SIZEOF_VOID_P} * 8")
+-        message(FATAL_ERROR
+-            "Python config failure: Python is ${_PYTHON_BITS}-bit, "
+-            "chosen compiler is  ${_CMAKE_BITS}-bit")
++# Ignore this test while crosscompiling otherwise it will use the host python.
++IF(NOT CMAKE_CROSSCOMPILING)
++    # Make sure the Python has the same pointer-size as the chosen compiler
++    # Skip if CMAKE_SIZEOF_VOID_P is not defined
++    if(CMAKE_SIZEOF_VOID_P AND (NOT "${PYTHON_SIZEOF_VOID_P}" STREQUAL "${CMAKE_SIZEOF_VOID_P}"))
++        if(PythonLibsNew_FIND_REQUIRED)
++            math(EXPR _PYTHON_BITS "${PYTHON_SIZEOF_VOID_P} * 8")
++            math(EXPR _CMAKE_BITS "${CMAKE_SIZEOF_VOID_P} * 8")
++            message(FATAL_ERROR
++                "Python config failure: Python is ${_PYTHON_BITS}-bit, "
++                "chosen compiler is  ${_CMAKE_BITS}-bit")
++        endif()
++        set(PYTHONLIBS_FOUND FALSE)
++        return()
+     endif()
+-    set(PYTHONLIBS_FOUND FALSE)
+-    return()
+ endif()
+ 
+ # The built-in FindPython didn't always give the version numbers
+-- 
+2.21.0
+
