@@ -10,15 +10,13 @@ DLIB_INSTALL_STAGING = YES
 DLIB_LICENSE = BSL-1.0
 DLIB_LICENSE_FILES = dlib/LICENSE.txt
 
-DLIB_DEPENDENCIES += host-pkgconf liblapack openblas jpeg libpng
+DLIB_DEPENDENCIES += host-pkgconf jpeg libpng
 
 # Disable cuda support.
 # Don't use bundled version of libpng and jpeg
 DLIB_CONF_OPTS = -DDLIB_USE_CUDA=OFF \
 	-DDLIB_JPEG_SUPPORT=ON \
 	-DDLIB_PNG_SUPPORT=ON \
-	-DDLIB_USE_BLAS=ON \
-	-DDLIB_USE_LAPACK=ON
 
 # Set AVX_IS_AVAILABLE_ON_HOST to avoid using try_run while crosscompiling.
 ifeq ($(BR2_X86_CPU_HAS_AVX),y)
